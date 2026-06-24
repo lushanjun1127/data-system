@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每月数据管理系统</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入SheetJS库用于Excel处理 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="app.js" as="script">
+</head>
+<body>
+    <div class="container">
+        <header class="main-header">
+            <div class="header-inner">
+                <h1 class="main-title">每月数据管理系统</h1>
+                <nav class="main-nav">
+                    <div class="nav-item active" data-tab="dashboard">控制面板</div>
+                    <div class="nav-item" data-tab="members">成员管理</div>
+                    <div class="nav-item" data-tab="input">数据录入</div>
+                    <div class="nav-item" data-tab="daily">日数据表</div>
+                    <div class="nav-item" data-tab="monthly">月数据表</div>
+                    <div class="nav-item" data-tab="excel">Excel管理</div>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 控制面板标签页 -->
+            <div class="tab-content active" id="dashboard-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>控制面板</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>欢迎使用每月数据管理系统。请选择上方菜单以访问相应功能。</p>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>总成员数</h3>
+                                <p id="total-members">0</p>
+                            </div>
+                            <div class="stat-card">
+                                <h3>今日数据</h3>
+                                <p id="today-data">0</p>
+                            </div>
+                            <div class="stat-card">
+                                <h3>本月数据</h3>
+                                <p id="month-data">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成员管理标签页 -->
+            <div class="tab-content" id="members-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>成员管理</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="memberForm" class="form">
+                            <div class="form-group">
+                                <label for="memberName">成员姓名:</label>
+                                <input type="text" id="memberName" placeholder="请输入成员姓名" required>
+                            </div>
+                            
+                            <button type="submit" id="addMemberBtn" class="btn btn-primary">添加成员</button>
+                        </form>
+                        
+                        <div class="table-actions">
+                            <button id="refreshMembersBtn" class="btn btn-secondary">刷新成员列表</button>
+                            <button id="clearMembersBtn" class="btn btn-danger">清空成员列表</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table id="membersTable">
+                                <thead>
+                                    <tr>
+                                        <th>姓名</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="membersTableBody">
+                                    <!-- 成员数据将通过JavaScript动态填充 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据录入标签页 -->
+            <div class="tab-content" id="input-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>上报数据</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="dataForm" class="form">
+                            <div class="form-group">
+                                <label for="date">日期:</label>
+                                <input type="date" id="date" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="reporter">上报人:</label>
+                                <select id="reporter" required>
+                                    <option value="">请选择上报人</option>
+                                    <!-- 成员选项将通过JavaScript动态填充 -->
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="activeAccounts">当日账号存活数量:</label>
+                                <input type="number" id="activeAccounts" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="actualData">当日实际打出数据:</label>
+                                <input type="number" id="actualData" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="replyRate">当日回复率 (%):</label>
+                                <input type="number" id="replyRate" min="0" max="100" step="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bannedAccounts">当日账号封禁数量:</label>
+                                <input type="number" id="bannedAccounts" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="restrictedAccounts">当日账号限制数量:</label>
+                                <input type="number" id="restrictedAccounts" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="drainageCount">当日引流数量:</label>
+                                <input type="number" id="drainageCount" min="0" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">提交数据</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 日数据表标签页 -->
+            <div class="tab-content" id="daily-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>日数据表格</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-actions">
+                            <button id="refreshDailyBtn" class="btn btn-secondary">刷新数据</button>
+                            <button id="clearDailyBtn" class="btn btn-danger">清空日数据</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="dailyTable">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>上报人</th>
+                                        <th>当日实际打出数据</th>
+                                        <th>当日引流数量</th>
+                                        <th>当月引流总数量</th>
+                                        <th>当日账号存活数量</th>
+                                        <th>回复率 (%)</th>
+                                        <th>当日封号数量</th>
+                                        <th>当日限制数量</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyTableBody">
+                                    <!-- 数据将通过JavaScript动态填充 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 月数据表标签页 -->
+            <div class="tab-content" id="monthly-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>月数据表格</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-actions">
+                            <button id="calculateMonthlyBtn" class="btn btn-secondary">重新计算月度数据</button>
+                            <button id="clearMonthlyBtn" class="btn btn-danger">清空月数据</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="monthlyTable">
+                                <thead>
+                                    <tr>
+                                        <th>月份</th>
+                                        <th>上报人</th>
+                                        <th>总当月数据数量</th>
+                                        <th>平均账号存活</th>
+                                        <th>平均实际打出数据</th>
+                                        <th>平均回复率 (%)</th>
+                                        <th>平均账号封禁</th>
+                                        <th>平均账号限制</th>
+                                        <th>平均引流数量</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthlyTableBody">
+                                    <!-- 数据将通过JavaScript动态填充 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Excel管理标签页 -->
+            <div class="tab-content" id="excel-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Excel数据管理</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="excel-buttons">
+                            <button id="loadFromExcelBtn" class="btn btn-info">从Excel加载数据</button>
+                            <button id="saveToExcelBtn" class="btn btn-success">保存数据到Excel</button>
+                        </div>
+                        
+                        <div class="export-buttons">
+                            <button id="exportExcelBtn" class="btn btn-outline">导出日数据</button>
+                            <button id="exportMonthlyExcelBtn" class="btn btn-outline">导出月数据</button>
+                            <button id="importExcelBtn" class="btn btn-outline">从Excel导入</button>
+                        </div>
+                        
+                        <div class="custom-order-section">
+                            <h3>自定义日数据表头排序</h3>
+                            <div class="order-controls" id="dailyOrderControls">
+                                <div class="order-item">
+                                    <label for="chk_date"><input type="checkbox" id="chk_date" name="chk_date" data-field="date" checked> 日期</label>
+                                    <input type="number" class="order-input" id="order_date" name="order_date" data-field="date" value="1" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_reporter"><input type="checkbox" id="chk_reporter" name="chk_reporter" data-field="reporter" checked> 上报人</label>
+                                    <input type="number" class="order-input" id="order_reporter" name="order_reporter" data-field="reporter" value="2" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_actualData"><input type="checkbox" id="chk_actualData" name="chk_actualData" data-field="actualData" checked> 当日实际打出数据</label>
+                                    <input type="number" class="order-input" id="order_actualData" name="order_actualData" data-field="actualData" value="3" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_drainageCount"><input type="checkbox" id="chk_drainageCount" name="chk_drainageCount" data-field="drainageCount" checked> 当日引流数量</label>
+                                    <input type="number" class="order-input" id="order_drainageCount" name="order_drainageCount" data-field="drainageCount" value="4" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_monthlyDrainageTotal"><input type="checkbox" id="chk_monthlyDrainageTotal" name="chk_monthlyDrainageTotal" data-field="monthlyDrainageTotal" checked> 当月引流总数量</label>
+                                    <input type="number" class="order-input" id="order_monthlyDrainageTotal" name="order_monthlyDrainageTotal" data-field="monthlyDrainageTotal" value="5" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_activeAccounts"><input type="checkbox" id="chk_activeAccounts" name="chk_activeAccounts" data-field="activeAccounts" checked> 当日账号存活数量</label>
+                                    <input type="number" class="order-input" id="order_activeAccounts" name="order_activeAccounts" data-field="activeAccounts" value="6" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_replyRate"><input type="checkbox" id="chk_replyRate" name="chk_replyRate" data-field="replyRate" checked> 回复率 (%)</label>
+                                    <input type="number" class="order-input" id="order_replyRate" name="order_replyRate" data-field="replyRate" value="7" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_bannedAccounts"><input type="checkbox" id="chk_bannedAccounts" name="chk_bannedAccounts" data-field="bannedAccounts" checked> 当日封号数量</label>
+                                    <input type="number" class="order-input" id="order_bannedAccounts" name="order_bannedAccounts" data-field="bannedAccounts" value="8" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_restrictedAccounts"><input type="checkbox" id="chk_restrictedAccounts" name="chk_restrictedAccounts" data-field="restrictedAccounts" checked> 当日限制数量</label>
+                                    <input type="number" class="order-input" id="order_restrictedAccounts" name="order_restrictedAccounts" data-field="restrictedAccounts" value="9" min="1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="custom-order-section">
+                            <h3>自定义月数据表头排序</h3>
+                            <div class="order-controls" id="monthlyOrderControls">
+                                <div class="order-item">
+                                    <label for="chk_month"><input type="checkbox" id="chk_month" name="chk_month" data-field="month" checked> 月份</label>
+                                    <input type="number" class="order-input" id="order_month" name="order_month" data-field="month" value="1" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_monthly_reporter"><input type="checkbox" id="chk_monthly_reporter" name="chk_monthly_reporter" data-field="reporter" checked> 上报人</label>
+                                    <input type="number" class="order-input" id="order_monthly_reporter" name="order_monthly_reporter" data-field="reporter" value="2" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_totalDataCount"><input type="checkbox" id="chk_totalDataCount" name="chk_totalDataCount" data-field="totalDataCount" checked> 总当月数据数量</label>
+                                    <input type="number" class="order-input" id="order_totalDataCount" name="order_totalDataCount" data-field="totalDataCount" value="3" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageActiveAccounts"><input type="checkbox" id="chk_averageActiveAccounts" name="chk_averageActiveAccounts" data-field="averageActiveAccounts" checked> 平均账号存活</label>
+                                    <input type="number" class="order-input" id="order_averageActiveAccounts" name="order_averageActiveAccounts" data-field="averageActiveAccounts" value="4" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageActualData"><input type="checkbox" id="chk_averageActualData" name="chk_averageActualData" data-field="averageActualData" checked> 平均实际打出数据</label>
+                                    <input type="number" class="order-input" id="order_averageActualData" name="order_averageActualData" data-field="averageActualData" value="5" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageReplyRate"><input type="checkbox" id="chk_averageReplyRate" name="chk_averageReplyRate" data-field="averageReplyRate" checked> 平均回复率 (%)</label>
+                                    <input type="number" class="order-input" id="order_averageReplyRate" name="order_averageReplyRate" data-field="averageReplyRate" value="6" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageBannedAccounts"><input type="checkbox" id="chk_averageBannedAccounts" name="chk_averageBannedAccounts" data-field="averageBannedAccounts" checked> 平均账号封禁</label>
+                                    <input type="number" class="order-input" id="order_averageBannedAccounts" name="order_averageBannedAccounts" data-field="averageBannedAccounts" value="7" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageRestrictedAccounts"><input type="checkbox" id="chk_averageRestrictedAccounts" name="chk_averageRestrictedAccounts" data-field="averageRestrictedAccounts" checked> 平均账号限制</label>
+                                    <input type="number" class="order-input" id="order_averageRestrictedAccounts" name="order_averageRestrictedAccounts" data-field="averageRestrictedAccounts" value="8" min="1">
+                                </div>
+                                <div class="order-item">
+                                    <label for="chk_averageDrainageCount"><input type="checkbox" id="chk_averageDrainageCount" name="chk_averageDrainageCount" data-field="averageDrainageCount" checked> 平均引流数量</label>
+                                    <input type="number" class="order-input" id="order_averageDrainageCount" name="order_averageDrainageCount" data-field="averageDrainageCount" value="9" min="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="main-footer">
+            <div class="footer-inner">
+                <p>&copy; 2026 每月数据管理系统. 版权所有.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 高性能数据管理系统 - 使用文档就绪事件
+        document.addEventListener('DOMContentLoaded', function() {
+            performance.mark('app-start'); // 性能标记
+            
+            // 初始化数据管理器
+            const dataManager = new DataManager();
+            
+            // 缓存DOM元素以提高性能
+            const domCache = {
+                // 表单元素
+                memberForm: document.getElementById('memberForm'),
+                dataForm: document.getElementById('dataForm'),
+                
+                // 输入元素
+                memberNameInput: document.getElementById('memberName'),
+                dateInput: document.getElementById('date'),
+                reporterSelect: document.getElementById('reporter'),
+                activeAccountsInput: document.getElementById('activeAccounts'),
+                actualDataInput: document.getElementById('actualData'),
+                replyRateInput: document.getElementById('replyRate'),
+                bannedAccountsInput: document.getElementById('bannedAccounts'),
+                restrictedAccountsInput: document.getElementById('restrictedAccounts'),
+                drainageCountInput: document.getElementById('drainageCount'),
+                
+                // 按钮元素
+                addMemberBtn: document.getElementById('addMemberBtn'),
+                refreshMembersBtn: document.getElementById('refreshMembersBtn'),
+                clearMembersBtn: document.getElementById('clearMembersBtn'),
+                refreshDailyBtn: document.getElementById('refreshDailyBtn'),
+                clearDailyBtn: document.getElementById('clearDailyBtn'),
+                calculateMonthlyBtn: document.getElementById('calculateMonthlyBtn'),
+                clearMonthlyBtn: document.getElementById('clearMonthlyBtn'),
+                loadFromExcelBtn: document.getElementById('loadFromExcelBtn'),
+                saveToExcelBtn: document.getElementById('saveToExcelBtn'),
+                exportCSVBtn: null,
+                exportJSONBtn: null,
+                exportExcelBtn: document.getElementById('exportExcelBtn'),
+                exportMonthlyExcelBtn: document.getElementById('exportMonthlyExcelBtn'),
+                importExcelBtn: document.getElementById('importExcelBtn'),
+                
+                // 表格元素
+                membersTableBody: document.getElementById('membersTableBody'),
+                dailyTableBody: document.getElementById('dailyTableBody'),
+                monthlyTableBody: document.getElementById('monthlyTableBody'),
+                
+                // 统计元素
+                totalMembers: document.getElementById('total-members'),
+                todayData: document.getElementById('today-data'),
+                monthData: document.getElementById('month-data'),
+                
+                // 标签页和按钮
+                navItems: document.querySelectorAll('.nav-item'),
+                tabContents: document.querySelectorAll('.tab-content')
+            };
+            
+            // 设置默认日期为今天
+            domCache.dateInput.valueAsDate = new Date();
+            
+            // 防抖函数 - 用于优化频繁调用的函数
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+            
+            // 节流函数 - 限制函数执行频率
+            function throttle(func, limit) {
+                let inThrottle;
+                return function() {
+                    const args = arguments;
+                    const context = this;
+                    if (!inThrottle) {
+                        func.apply(context, args);
+                        inThrottle = true;
+                        setTimeout(() => inThrottle = false, limit);
+                    }
+                }
+            }
+            
+            // 高效的表格渲染函数，支持大数据量
+            function renderMembersTable() {
+                performance.mark('renderMembersTable-start');
+                const members = dataManager.getMembersData();
+                domCache.totalMembers.textContent = members.length;
+                
+                // 使用文档片段提高DOM操作性能
+                const fragment = document.createDocumentFragment();
+                
+                // 分批处理大量数据以避免阻塞UI
+                const batchSize = 100;
+                let index = 0;
+                
+                function processBatch() {
+                    const endIndex = Math.min(index + batchSize, members.length);
+                    for (; index < endIndex; index++) {
+                        const member = members[index];
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${escapeHtml(member.name)}</td>
+                            <td>
+                                <button class="delete-btn" data-name="${escapeHtml(member.name)}">删除</button>
+                            </td>
+                        `;
+                        fragment.appendChild(row);
+                    }
+                    
+                    if (index < members.length) {
+                        // 如果还有更多数据，使用requestAnimationFrame继续处理
+                        requestAnimationFrame(processBatch);
+                    } else {
+                        // 所有数据处理完成，一次性更新DOM
+                        domCache.membersTableBody.innerHTML = '';
+                        domCache.membersTableBody.appendChild(fragment);
+                        
+                        // 为删除按钮添加事件监听器 - 使用事件委托
+                        if (!domCache.membersTableBody.dataset.actionBound) {
+                            domCache.membersTableBody.dataset.actionBound = 'true';
+                            domCache.membersTableBody.addEventListener('click', function(e) {
+                            if (e.target.classList.contains('delete-btn')) {
+                                const name = e.target.getAttribute('data-name');
+                                if (confirm(`确定要删除成员 "${name}" 吗？`)) {
+                                    dataManager.deleteMember(name);
+                                    renderMembersTable();
+                                }
+                            }
+                            });
+                        }
+                        
+                        performance.mark('renderMembersTable-end');
+                        performance.measure('renderMembersTable', 'renderMembersTable-start', 'renderMembersTable-end');
+                    }
+                }
+                
+                processBatch();
+            }
+            
+            // 转义HTML以防止XSS攻击
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+            
+            // 渲染日数据表，优化大数据量处理
+            function renderDailyTable() {
+                performance.mark('renderDailyTable-start');
+                let dailyData = dataManager.getDailyData();
+                
+                // 重新计算当月引流总数量 - 按成员分别计算
+                const monthlyDrainageMap = new Map(); // 使用复合键：month_reporter
+                for (const item of dailyData) {
+                    const date = new Date(item.date);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    const compositeKey = `${monthKey}_${item.reporter}`; // 月+上报人作为唯一键
+                    
+                    if (!monthlyDrainageMap.has(compositeKey)) {
+                        monthlyDrainageMap.set(compositeKey, 0);
+                    }
+                    
+                    monthlyDrainageMap.set(compositeKey, monthlyDrainageMap.get(compositeKey) + item.drainageCount);
+                }
+                
+                // 为每条记录添加当月引流总数量
+                dailyData = dailyData.map(item => {
+                    const date = new Date(item.date);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    const compositeKey = `${monthKey}_${item.reporter}`;
+                    return {
+                        ...item,
+                        monthlyDrainageTotal: monthlyDrainageMap.get(compositeKey)
+                    };
+                });
+                
+                // 使用文档片段提高DOM操作性能
+                const fragment = document.createDocumentFragment();
+                
+                // 分批处理大量数据以避免阻塞UI
+                const batchSize = 100;
+                let index = 0;
+                
+                function processBatch() {
+                    const endIndex = Math.min(index + batchSize, dailyData.length);
+                    for (; index < endIndex; index++) {
+                        const item = dailyData[index];
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.date}</td>
+                            <td>${escapeHtml(item.reporter)}</td>
+                            <td>${item.actualData}</td>
+                            <td>${item.drainageCount}</td>
+                            <td>${item.monthlyDrainageTotal || 0}</td>
+                            <td>${item.activeAccounts}</td>
+                            <td>${item.replyRate}%</td>
+                            <td>${item.bannedAccounts}</td>
+                            <td>${item.restrictedAccounts}</td>
+                            <td>
+                                <button class="edit-btn" data-date="${item.date}" data-reporter="${escapeHtml(item.reporter)}">编辑</button>
+                                <button class="delete-btn" data-date="${item.date}" data-reporter="${escapeHtml(item.reporter)}">删除</button>
+                            </td>
+                        `;
+                        fragment.appendChild(row);
+                    }
+                    
+                    if (index < dailyData.length) {
+                        // 如果还有更多数据，使用requestAnimationFrame继续处理
+                        requestAnimationFrame(processBatch);
+                    } else {
+                        // 所有数据处理完成，一次性更新DOM
+                        domCache.dailyTableBody.innerHTML = '';
+                        domCache.dailyTableBody.appendChild(fragment);
+                        
+                        // 为编辑和删除按钮添加事件监听器 - 使用事件委托
+                        if (!domCache.dailyTableBody.dataset.actionBound) {
+                            domCache.dailyTableBody.dataset.actionBound = 'true';
+                            domCache.dailyTableBody.addEventListener('click', function(e) {
+                            if (e.target.classList.contains('edit-btn')) {
+                                const date = e.target.getAttribute('data-date');
+                                const reporter = e.target.getAttribute('data-reporter');
+                                const item = dataManager.getDailyData().find(d => d.date === date && d.reporter === reporter);
+                                if (item) {
+                                    openEditModal(item);
+                                }
+                            } else if (e.target.classList.contains('delete-btn')) {
+                                const date = e.target.getAttribute('data-date');
+                                const reporter = e.target.getAttribute('data-reporter');
+                                if (confirm(`确定要删除 ${date} ${reporter} 的数据吗？`)) {
+                                    dataManager.deleteDailyData(date, reporter);
+                                    renderDailyTable();
+                                }
+                            }
+                            });
+                        }
+                        
+                        performance.mark('renderDailyTable-end');
+                        performance.measure('renderDailyTable', 'renderDailyTable-start', 'renderDailyTable-end');
+                    }
+                }
+                
+                processBatch();
+            }
+            
+            // 渲染月数据表
+            function renderMonthlyTable() {
+                performance.mark('renderMonthlyTable-start');
+                const monthlyData = dataManager.getMonthlyData();
+                
+                // 使用文档片段提高DOM操作性能
+                const fragment = document.createDocumentFragment();
+                
+                // 分批处理大量数据以避免阻塞UI
+                const batchSize = 100;
+                let index = 0;
+                
+                function processBatch() {
+                    const endIndex = Math.min(index + batchSize, monthlyData.length);
+                    for (; index < endIndex; index++) {
+                        const item = monthlyData[index];
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.month}</td>
+                            <td>${escapeHtml(item.reporter)}</td>
+                            <td>${item.totalDataCount}</td>
+                            <td>${item.averageActiveAccounts}</td>
+                            <td>${item.averageActualData}</td>
+                            <td>${item.averageReplyRate}%</td>
+                            <td>${item.averageBannedAccounts}</td>
+                            <td>${item.averageRestrictedAccounts}</td>
+                            <td>${item.averageDrainageCount}</td>
+                            <td>
+                                <button class="delete-btn" data-month="${item.month}" data-reporter="${escapeHtml(item.reporter)}">删除</button>
+                            </td>
+                        `;
+                        fragment.appendChild(row);
+                    }
+                    
+                    if (index < monthlyData.length) {
+                        // 如果还有更多数据，使用requestAnimationFrame继续处理
+                        requestAnimationFrame(processBatch);
+                    } else {
+                        // 所有数据处理完成，一次性更新DOM
+                        domCache.monthlyTableBody.innerHTML = '';
+                        domCache.monthlyTableBody.appendChild(fragment);
+                        
+                        // 为删除按钮添加事件监听器 - 使用事件委托
+                        if (!domCache.monthlyTableBody.dataset.actionBound) {
+                            domCache.monthlyTableBody.dataset.actionBound = 'true';
+                            domCache.monthlyTableBody.addEventListener('click', function(e) {
+                            if (e.target.classList.contains('delete-btn')) {
+                                const month = e.target.getAttribute('data-month');
+                                const reporter = e.target.getAttribute('data-reporter');
+                                if (confirm(`确定要删除 ${month} ${reporter} 的月数据吗？`)) {
+                                    dataManager.deleteMonthlyData(month, reporter);
+                                    renderMonthlyTable();
+                                }
+                            }
+                            });
+                        }
+                        
+                        performance.mark('renderMonthlyTable-end');
+                        performance.measure('renderMonthlyTable', 'renderMonthlyTable-start', 'renderMonthlyTable-end');
+                    }
+                }
+                
+                processBatch();
+            }
+            
+            // 填充上报人下拉菜单
+            function populateReporterDropdown() {
+                const members = dataManager.getMembersData();
+                const options = members.map(member => 
+                    `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`
+                ).join('');
+                
+                // 保持当前选中的值
+                const currentValue = domCache.reporterSelect.value;
+                
+                domCache.reporterSelect.innerHTML = '<option value="">请选择上报人</option>' + options;
+                
+                // 恢复之前的选中状态
+                if (currentValue) {
+                    domCache.reporterSelect.value = currentValue;
+                }
+            }
+            
+            // 更新统计信息
+            function updateStats() {
+                performance.mark('updateStats-start');
+                const members = dataManager.getMembersData();
+                const dailyData = dataManager.getDailyData();
+                
+                // 计算今日数据（今天的记录数）
+                const today = new Date().toISOString().split('T')[0];
+                const todayCount = dailyData.filter(item => item.date === today).length;
+                
+                // 计算本月数据（本月的记录数）
+                const currentMonth = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
+                const monthCount = dailyData.filter(item => {
+                    const itemMonth = item.date.substring(0, 7);
+                    return itemMonth === currentMonth;
+                }).length;
+                
+                domCache.totalMembers.textContent = members.length;
+                domCache.todayData.textContent = todayCount;
+                domCache.monthData.textContent = monthCount;
+                
+                performance.mark('updateStats-end');
+                performance.measure('updateStats', 'updateStats-start', 'updateStats-end');
+            }
+            
+            // 打开编辑模态框
+            function openEditModal(item) {
+                // 创建唯一的ID，避免冲突
+                const uniqueId = Date.now().toString();
+                
+                // 创建模态框
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.id = 'editModal_' + uniqueId;
+                modal.style.position = 'fixed';
+                modal.style.left = '0';
+                modal.style.top = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '1000';
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.3s';
+                
+                // 短暂延迟以触发动画
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                }, 10);
+
+                // 创建模态框内容
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                modalContent.style.backgroundColor = 'white';
+                modalContent.style.padding = '20px';
+                modalContent.style.borderRadius = '8px';
+                modalContent.style.width = '500px';
+                modalContent.style.maxWidth = '90%';
+                modalContent.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                modalContent.style.position = 'relative';
+                
+                modalContent.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #333;">编辑数据</h3>
+                        <span id="closeEditModal_${uniqueId}" style="font-size: 24px; cursor: pointer; color: #999; font-weight: bold;">&times;</span>
+                    </div>
+                    <form id="editDataForm_${uniqueId}">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editDate_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">日期:</label>
+                            <input type="date" id="editDate_${uniqueId}" value="${item.date}" readonly style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editReporter_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">上报人:</label>
+                            <select id="editReporter_${uniqueId}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                                <option value="">请选择上报人</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editActiveAccounts_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">当日账号存活数量:</label>
+                            <input type="number" id="editActiveAccounts_${uniqueId}" min="0" value="${item.activeAccounts}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editActualData_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">当日实际打出数据:</label>
+                            <input type="number" id="editActualData_${uniqueId}" min="0" value="${item.actualData}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editReplyRate_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">回复率 (%):</label>
+                            <input type="number" id="editReplyRate_${uniqueId}" min="0" max="100" step="0.01" value="${item.replyRate}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editBannedAccounts_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">当日封号数量:</label>
+                            <input type="number" id="editBannedAccounts_${uniqueId}" min="0" value="${item.bannedAccounts}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editRestrictedAccounts_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">当日限制数量:</label>
+                            <input type="number" id="editRestrictedAccounts_${uniqueId}" min="0" value="${item.restrictedAccounts}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="editDrainageCount_${uniqueId}" style="display: block; margin-bottom: 5px; font-weight: 500;">当日引流数量:</label>
+                            <input type="number" id="editDrainageCount_${uniqueId}" min="0" value="${item.drainageCount}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn_${uniqueId}" style="min-width: 80px;">取消</button>
+                            <button type="submit" class="btn btn-primary" style="min-width: 80px;">保存</button>
+                        </div>
+                    </form>
+                `;
+                
+                // 填充上报人下拉菜单
+                const members = dataManager.getMembersData();
+                const reporterSelect = modalContent.querySelector(`#editReporter_${uniqueId}`);
+                const options = members.map(member => 
+                    `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`
+                ).join('');
+                
+                reporterSelect.innerHTML = '<option value="">请选择上报人</option>' + options;
+                reporterSelect.value = item.reporter;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // 使用requestAnimationFrame确保DOM元素已被添加到页面
+                requestAnimationFrame(() => {
+                    // 处理表单提交
+                    const formElement = modalContent.querySelector(`#editDataForm_${uniqueId}`);
+                    if(formElement) {
+                        formElement.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            
+                            const updatedData = {
+                                date: modalContent.querySelector(`#editDate_${uniqueId}`).value,
+                                reporter: modalContent.querySelector(`#editReporter_${uniqueId}`).value,
+                                activeAccounts: parseInt(modalContent.querySelector(`#editActiveAccounts_${uniqueId}`).value),
+                                actualData: parseInt(modalContent.querySelector(`#editActualData_${uniqueId}`).value),
+                                replyRate: parseFloat(modalContent.querySelector(`#editReplyRate_${uniqueId}`).value),
+                                bannedAccounts: parseInt(modalContent.querySelector(`#editBannedAccounts_${uniqueId}`).value),
+                                restrictedAccounts: parseInt(modalContent.querySelector(`#editRestrictedAccounts_${uniqueId}`).value),
+                                drainageCount: parseInt(modalContent.querySelector(`#editDrainageCount_${uniqueId}`).value)
+                            };
+                            
+                            // 保存更新后的数据
+                            dataManager.updateDailyData(updatedData);
+                            renderDailyTable(); // 重新渲染表格
+                            closeModal(modal);
+                        });
+                    }
+                    
+                    // 处理取消按钮
+                    const cancelBtn = modalContent.querySelector(`#cancelEditBtn_${uniqueId}`);
+                    if(cancelBtn) {
+                        cancelBtn.addEventListener('click', function() {
+                            closeModal(modal);
+                        });
+                    }
+                    
+                    // 处理关闭按钮
+                    const closeBtn = modalContent.querySelector(`#closeEditModal_${uniqueId}`);
+                    if(closeBtn) {
+                        closeBtn.addEventListener('click', function() {
+                            closeModal(modal);
+                        });
+                    }
+                    
+                    // 点击模态框背景关闭
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            closeModal(modal);
+                        }
+                    });
+                    
+                    // 添加ESC键关闭功能
+                    const handleEscKey = function(e) {
+                        if (e.key === 'Escape') {
+                            closeModal(modal);
+                            document.removeEventListener('keydown', handleEscKey);
+                        }
+                    };
+                    document.addEventListener('keydown', handleEscKey);
+                });
+                
+                // 关闭模态框的辅助函数
+                function closeModal(modalElement) {
+                    modalElement.style.opacity = '0';
+                    setTimeout(() => {
+                        if (document.body.contains(modalElement)) {
+                            document.body.removeChild(modalElement);
+                        }
+                    }, 300);
+                }
+            }
+            
+            // 切换标签页
+            function switchTab(tabName) {
+                performance.mark('switchTab-start');
+                
+                // 移除所有活动标签页的active类
+                domCache.tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // 移除所有导航项的active类
+                domCache.navItems.forEach(navItem => {
+                    navItem.classList.remove('active');
+                });
+                
+                // 添加active类到当前标签页和导航项
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+                
+                // 根据标签页类型更新内容
+                switch(tabName) {
+                    case 'members':
+                        renderMembersTable();
+                        break;
+                    case 'daily':
+                        renderDailyTable();
+                        break;
+                    case 'monthly':
+                        renderMonthlyTable();
+                        break;
+                }
+                
+                performance.mark('switchTab-end');
+                performance.measure('switchTab', 'switchTab-start', 'switchTab-end');
+            }
+            
+            // 事件委托 - 高效处理标签页切换
+            document.querySelector('.main-nav').addEventListener('click', function(e) {
+                if (e.target.classList.contains('nav-item')) {
+                    const tabName = e.target.getAttribute('data-tab');
+                    switchTab(tabName);
+                }
+            });
+            
+            // 成员管理事件
+            domCache.memberForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = domCache.memberNameInput.value.trim();
+                if (name) {
+                    performance.mark('addMember-start');
+                    dataManager.saveMember({ name });
+                    domCache.memberNameInput.value = '';
+                    renderMembersTable();
+                    populateReporterDropdown();
+                    updateStats();
+                    performance.mark('addMember-end');
+                    performance.measure('addMember', 'addMember-start', 'addMember-end');
+                    alert('成员添加成功！');
+                }
+            });
+            
+            domCache.refreshMembersBtn.addEventListener('click', renderMembersTable);
+            
+            domCache.clearMembersBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有成员吗？此操作不可恢复！')) {
+                    performance.mark('clearMembers-start');
+                    dataManager.clearMembersData();
+                    renderMembersTable();
+                    populateReporterDropdown();
+                    updateStats();
+                    performance.mark('clearMembers-end');
+                    performance.measure('clearMembers', 'clearMembers-start', 'clearMembers-end');
+                }
+            });
+            
+            // 数据录入事件
+            domCache.dataForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                performance.mark('submitData-start');
+                
+                const formData = {
+                    date: domCache.dateInput.value,
+                    reporter: domCache.reporterSelect.value,
+                    activeAccounts: parseInt(domCache.activeAccountsInput.value),
+                    actualData: parseInt(domCache.actualDataInput.value),
+                    replyRate: parseFloat(domCache.replyRateInput.value),
+                    bannedAccounts: parseInt(domCache.bannedAccountsInput.value),
+                    restrictedAccounts: parseInt(domCache.restrictedAccountsInput.value),
+                    drainageCount: parseInt(domCache.drainageCountInput.value)
+                };
+                
+                // 计算当月引流总数量 - 只针对同一个成员
+                const dailyData = dataManager.getDailyData();
+                const date = new Date(formData.date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                // 只累加当前成员在当月的引流数量
+                let monthlyDrainageTotal = formData.drainageCount; // 至少包含当前条目的引流数
+                dailyData.forEach(item => {
+                    const itemDate = new Date(item.date);
+                    const itemMonthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+                    // 只统计同一个成员的数据
+                    if (itemMonthKey === monthKey && item.date !== formData.date && item.reporter === formData.reporter) {
+                        monthlyDrainageTotal += item.drainageCount;
+                    }
+                });
+                
+                formData.monthlyDrainageTotal = monthlyDrainageTotal;
+                
+                dataManager.saveDailyData(formData);
+                
+                // 重置表单
+                domCache.dataForm.reset();
+                domCache.dateInput.valueAsDate = new Date();
+                
+                // 更新相关视图
+                if (document.querySelector('#daily-tab').classList.contains('active')) {
+                    renderDailyTable();
+                }
+                updateStats();
+                
+                performance.mark('submitData-end');
+                performance.measure('submitData', 'submitData-start', 'submitData-end');
+                
+                alert('数据提交成功！');
+            });
+            
+            // 日数据表事件
+            domCache.refreshDailyBtn.addEventListener('click', renderDailyTable);
+            
+            domCache.clearDailyBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有日数据吗？此操作不可恢复！')) {
+                    performance.mark('clearDaily-start');
+                    dataManager.clearDailyData();
+                    renderDailyTable();
+                    renderMonthlyTable(); // 清空日数据后也需要清空月数据
+                    updateStats();
+                    performance.mark('clearDaily-end');
+                    performance.measure('clearDaily', 'clearDaily-start', 'clearDaily-end');
+                }
+            });
+            
+            // 月数据表事件
+            domCache.calculateMonthlyBtn.addEventListener('click', function() {
+                performance.mark('calculateMonthly-start');
+                dataManager.calculateMonthlyData();
+                renderMonthlyTable();
+                performance.mark('calculateMonthly-end');
+                performance.measure('calculateMonthly', 'calculateMonthly-start', 'calculateMonthly-end');
+                alert('月度数据计算完成！');
+            });
+            
+            domCache.clearMonthlyBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有月数据吗？')) {
+                    performance.mark('clearMonthly-start');
+                    dataManager.clearMonthlyData();
+                    renderMonthlyTable();
+                    performance.mark('clearMonthly-end');
+                    performance.measure('clearMonthly', 'clearMonthly-start', 'clearMonthly-end');
+                }
+            });
+            
+            // Excel管理事件
+            domCache.loadFromExcelBtn.addEventListener('click', function() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.xlsx, .xls';
+                
+                fileInput.onchange = async function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    try {
+                        performance.mark('loadFromExcel-start');
+                        const result = await dataManager.loadFromExcel(file);
+                        
+                        // 保存加载的数据
+                        if (result.dailyData && result.dailyData.length > 0) {
+                            // 这里需要逐个保存日数据，或者直接替换
+                            localStorage.setItem('dailyData', JSON.stringify(result.dailyData));
+                            dataManager._clearDailyDataCache(); // 清除缓存
+                        }
+                        
+                        if (result.monthlyData && result.monthlyData.length > 0) {
+                            localStorage.setItem('monthlyData', JSON.stringify(result.monthlyData));
+                            dataManager._clearMonthlyDataCache(); // 清除缓存
+                        }
+                        
+                        if (result.membersData && result.membersData.length > 0) {
+                            localStorage.setItem('membersData', JSON.stringify(result.membersData));
+                            dataManager._clearMembersDataCache(); // 清除缓存
+                        }
+                        
+                        performance.mark('loadFromExcel-end');
+                        performance.measure('loadFromExcel', 'loadFromExcel-start', 'loadFromExcel-end');
+                        
+                        alert('数据加载完成！共加载：' + 
+                              (result.dailyData.length || 0) + '条日数据，' +
+                              (result.monthlyData.length || 0) + '条月数据，' +
+                              (result.membersData.length || 0) + '条成员数据');
+                        
+                        // 更新相关视图
+                        if (document.querySelector('#members-tab').classList.contains('active')) {
+                            renderMembersTable();
+                            populateReporterDropdown();
+                        }
+                        if (document.querySelector('#daily-tab').classList.contains('active')) {
+                            renderDailyTable();
+                        }
+                        if (document.querySelector('#monthly-tab').classList.contains('active')) {
+                            renderMonthlyTable();
+                        }
+                        updateStats();
+                    } catch (error) {
+                        console.error('加载Excel数据失败:', error);
+                        alert('加载Excel数据失败：' + error.message);
+                    }
+                };
+                
+                fileInput.click();
+            });
+            
+            domCache.saveToExcelBtn.addEventListener('click', function() {
+                const dailyData = dataManager.getDailyData();
+                const monthlyData = dataManager.getMonthlyData();
+                const membersData = dataManager.getMembersData();
+                
+                dataManager.saveAllToExcel(dailyData, monthlyData, membersData);
+            });
+            
+            // 为导出按钮添加事件监听器（仅在元素存在时）
+            if(domCache.exportCSVBtn) {
+                domCache.exportCSVBtn.addEventListener('click', function() {
+                    // 已移除CSV导出功能
+                });
+            }
+            
+            if(domCache.exportJSONBtn) {
+                domCache.exportJSONBtn.addEventListener('click', function() {
+                    // 已移除JSON导出功能
+                });
+            }
+            
+            if(domCache.exportExcelBtn) {
+                domCache.exportExcelBtn.addEventListener('click', function() {
+                    performance.mark('exportExcel-start');
+                    const dailyData = dataManager.getDailyData();
+                    
+                    // 获取自定义排序设置
+                    const customOrder = getCustomDailyOrder();
+                    
+                    dataManager.exportToExcelWithCustomOrder(dailyData, 'daily_data.xlsx', customOrder, 'daily');
+                    performance.mark('exportExcel-end');
+                    performance.measure('exportExcel', 'exportExcel-start', 'exportExcel-end');
+                });
+            }
+            
+            if(domCache.exportMonthlyExcelBtn) {
+                domCache.exportMonthlyExcelBtn.addEventListener('click', function() {
+                    performance.mark('exportMonthlyExcel-start');
+                    const monthlyData = dataManager.getMonthlyData();
+                    
+                    // 获取自定义排序设置
+                    const customOrder = getCustomMonthlyOrder();
+                    
+                    dataManager.exportToExcelWithCustomOrder(monthlyData, 'monthly_data.xlsx', customOrder, 'monthly');
+                    performance.mark('exportMonthlyExcel-end');
+                    performance.measure('exportMonthlyExcel', 'exportMonthlyExcel-start', 'exportMonthlyExcel-end');
+                });
+            }
+            
+            domCache.importExcelBtn.addEventListener('click', function() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.xlsx, .xls';
+                
+                fileInput.onchange = async function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const activeTab = document.querySelector('.tab-content.active').id.replace('-tab', '');
+                    let dataType;
+                    
+                    switch(activeTab) {
+                        case 'members':
+                            dataType = 'members';
+                            break;
+                        case 'daily':
+                            dataType = 'daily';
+                            break;
+                        default:
+                            dataType = 'daily'; // 默认导入日数据
+                    }
+                    
+                    try {
+                        performance.mark('importExcel-start');
+                        const importedData = await dataManager.importFromExcel(file, dataType);
+                        
+                        if (dataType === 'members') {
+                            importedData.forEach(member => {
+                                dataManager.saveMember(member);
+                            });
+                            renderMembersTable();
+                            populateReporterDropdown();
+                        } else if (dataType === 'daily') {
+                            importedData.forEach(dailyItem => {
+                                dataManager.saveDailyData(dailyItem);
+                            });
+                            renderDailyTable();
+                        }
+                        
+                        performance.mark('importExcel-end');
+                        performance.measure('importExcel', 'importExcel-start', 'importExcel-end');
+                        
+                        alert(`成功导入${importedData.length}条${dataType === 'members' ? '成员' : '日数据'}记录！`);
+                        updateStats();
+                    } catch (error) {
+                        console.error('导入Excel数据失败:', error);
+                        alert('导入Excel数据失败：' + error.message);
+                    }
+                };
+                
+                fileInput.click();
+            });
+            
+            // 获取自定义日数据排序设置
+            function getCustomDailyOrder() {
+                const orderInputs = document.querySelectorAll('#dailyOrderControls .order-input');
+                const checkboxes = document.querySelectorAll('#dailyOrderControls input[type="checkbox"]');
+                
+                // 获取启用的字段
+                const enabledFields = Array.from(checkboxes)
+                    .filter(checkbox => checkbox.checked)
+                    .map(checkbox => checkbox.dataset.field);
+                
+                // 获取排序值
+                const orderMap = {};
+                orderInputs.forEach(input => {
+                    orderMap[input.dataset.field] = parseInt(input.value);
+                });
+                
+                // 按排序值排序字段
+                const sortedFields = enabledFields
+                    .filter(field => !isNaN(orderMap[field]))
+                    .sort((a, b) => orderMap[a] - orderMap[b]);
+                
+                return sortedFields;
+            }
+            
+            // 获取自定义月数据排序设置
+            function getCustomMonthlyOrder() {
+                const orderInputs = document.querySelectorAll('#monthlyOrderControls .order-input');
+                const checkboxes = document.querySelectorAll('#monthlyOrderControls input[type="checkbox"]');
+                
+                // 获取启用的字段
+                const enabledFields = Array.from(checkboxes)
+                    .filter(checkbox => checkbox.checked)
+                    .map(checkbox => checkbox.dataset.field);
+                
+                // 获取排序值
+                const orderMap = {};
+                orderInputs.forEach(input => {
+                    orderMap[input.dataset.field] = parseInt(input.value);
+                });
+                
+                // 按排序值排序字段
+                const sortedFields = enabledFields
+                    .filter(field => !isNaN(orderMap[field]))
+                    .sort((a, b) => orderMap[a] - orderMap[b]);
+                
+                return sortedFields;
+            }
+            
+            // 初始化页面
+            performance.mark('initialization-start');
+            populateReporterDropdown();
+            updateStats();
+            performance.mark('initialization-end');
+            performance.measure('initialization', 'initialization-start', 'initialization-end');
+            
+            // 如果有大量数据，使用防抖来优化渲染
+            const debouncedRenderDailyTable = debounce(renderDailyTable, 100);
+            const debouncedRenderMonthlyTable = debounce(renderMonthlyTable, 100);
+            
+            // 为大量数据操作使用节流
+            const throttledUpdateStats = throttle(updateStats, 500);
+            
+            // 页面可见性API - 当页面变为可见时更新数据
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // 页面变为可见时更新统计数据
+                    updateStats();
+                }
+            });
+            
+            performance.mark('app-end');
+            performance.measure('app-total', 'app-start', 'app-end');
+            
+            // 输出性能指标到控制台
+            setTimeout(() => {
+                const measures = performance.getEntriesByType('measure');
+                console.group('Performance Metrics');
+                measures.forEach(measure => {
+                    console.log(`${measure.name}: ${measure.duration.toFixed(2)}ms`);
+                });
+                console.groupEnd();
+            }, 1000);
+        });
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
